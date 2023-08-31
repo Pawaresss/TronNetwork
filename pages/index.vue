@@ -4,12 +4,24 @@
     <v-row justify="center">
       <v-col cols="12" sm="8" md="6" class="text-center">
         <v-text-field
-          v-model="walletAddress"
-          label="Wallet Address"
+          v-model="contractAddress"
+          label="Token Contract Address"
           outlined
           dense
           color="primary"
-          placeholder="Enter wallet address"
+          placeholder="Enter token contract address"
+        ></v-text-field>
+      </v-col>
+    </v-row>
+    <v-row justify="center">
+      <v-col cols="12" sm="8" md="6" class="text-center">
+        <v-text-field
+          v-model="recipientAddress"
+          label="Recipient Address (ผู้รับ)"
+          outlined
+          dense
+          color="primary"
+          placeholder="Enter recipient address"
         ></v-text-field>
       </v-col>
     </v-row>
@@ -17,7 +29,7 @@
       <v-col cols="12" sm="8" md="6" class="text-center">
         <v-text-field
           v-model="amount"
-          label="Amount"
+          label="Amount ( TRX )"
           outlined
           dense
           color="primary"
@@ -26,8 +38,20 @@
       </v-col>
     </v-row>
     <v-row justify="center">
+      <v-col cols="12" sm="8" md="6" class="text-center">
+        <v-text-field
+          v-model="privateKey"
+          label="Private Key"
+          outlined
+          dense
+          color="primary"
+          placeholder="Enter private key"
+        ></v-text-field>
+      </v-col>
+    </v-row>
+    <v-row justify="center">
       <v-col cols="12" class="text-center">
-        <v-btn color="primary" @click="submitForm">Send tokens</v-btn>
+        <v-btn color="primary" @click="sendTokens">Send tokens</v-btn>
       </v-col>
     </v-row>
     <v-bottom-navigation color="primary" absolute app>
@@ -39,53 +63,83 @@
         <v-icon>{{ item.icon }}</v-icon>
       </v-btn>
     </v-bottom-navigation>
+    
+    <!-- เพิ่มส่วนที่แสดงผลการโอนเงินได้ตรงนี้ -->
+    <v-row justify="center" v-if="transactionResult">
+      <v-col cols="12" sm="8" md="6" class="text-center">
+        <h2>Transaction Result</h2>
+        <p>{{ transactionResult }}</p>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
 <script>
-import axios from 'axios';
-
 export default {
   data() {
     return {
-      walletAddress: '',
+      contractAddress: '', // ที่อยู่ของ smart contract ของเหรียญ TRC-20
+      recipientAddress: '',
+      contract: null,
       amount: '',
+      privateKey: '', // เพิ่มช่องสำหรับใส่ Private Key
       navigationItems: [
         { icon: 'mdi-home', to: '/' },
         { icon: 'mdi-account', to: '/home' },
       ],
+      contractAbi: [ // ระบุ ABI ของสัญญา TRC-20 ของคุณ
+        {
+          constant: true,
+          inputs: [{ name: '_owner', type: 'address' }],
+          name: 'balanceOf',
+          outputs: [{ name: 'balance', type: 'uint256' }],
+          payable: false,
+          stateMutability: 'view',
+          type: 'function',
+        },
+        // เพิ่มเมธอดอื่น ๆ ของสัญญา TRC-20 ตรงนี้
+      ],
+      transactionResult: null, // ผลลัพธ์ของการโอนเงิน
     };
   },
+
+
+
   methods: {
-    submitForm() {
-      // ทำสิ่งที่คุณต้องการเมื่อกดปุ่ม Submit
-      console.log('Wallet Address:', this.walletAddress);
-      console.log('Amount:', this.amount);
-    },
+    sendTokens() {
+      
+  // Check if the contract address is provided
+  if (!this.contractAddress) {
+    console.error('Contract address is required.');
+    return;
+  }
+
+  // Initialize the contract instance
+  this.contract = tronWeb.contract(this.contractAbi, this.contractAddress);
+
+  // Create the transaction object
+  const transactionObject = {
+    to: this.contractAddress,
+    value: 0,
+    data: this.contract.transfer(this.recipientAddress, this.amount).encodeABI(),
+  };
+
+  // Sign and send the transaction
+  tronWeb.trx.sign(transactionObject, this.privateKey)
+    .then((signedTransaction) => {
+      return tronWeb.trx.sendRawTransaction(signedTransaction);
+    })
+    .then((result) => {
+      console.log('Transaction Result:', result);
+      this.transactionResult = 'Transaction Successful';
+    })
+    .catch((error) => {
+      console.error('Error sending tokens:', error);
+      this.transactionResult = 'Transaction Failed';
+    });
+},
   },
 };
+
+
 </script>
-
-<style>
-.v-text-field--solo > .v-input__control > .v-input__slot {
-  border-color: #2196f3;
-}
-
-.v-label {
-  color: #2196f3;
-}
-
-.v-text-field__details {
-  color: #757575;
-}
-
-.v-input__icon.v-input__icon--clear {
-  color: #f44336;
-}
-
-/* สไตล์สำหรับปุ่ม */
-.v-btn {
-  text-transform: none;
-  font-weight: bold;
-}
-</style>

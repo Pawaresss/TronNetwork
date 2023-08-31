@@ -1,20 +1,16 @@
 <template>
   <v-container>
-    <h1 class="text-center mb-4">Generate Wallet</h1>
+    <h1 class="text-center mb-4">Wallet address</h1>
     <v-row justify="center">
       <v-col cols="12" sm="8" md="6" class="text-center">
-        <v-text-field
-          v-model="walletAddress"
-          label="Wallet address"
-          outlined
-          dense
-          color="primary"
-        ></v-text-field>
+        <div class="white--text">{{ walletAddress }}</div>
+        <div class="white--text">Private Key: {{ privateKey }}</div> <!-- แสดง PrivateKey ที่นี่ -->
       </v-col>
     </v-row>
     <v-row justify="center">
       <v-col cols="12" class="text-center">
         <v-btn color="primary" @click="submitForm">Generate Wallet</v-btn>
+        <v-btn color="primary" @click="refreshPage">ลบ</v-btn> <!-- เพิ่มปุ่มรีเฟรชหน้า -->
       </v-col>
     </v-row>
     <v-bottom-navigation color="primary" absolute app>
@@ -35,7 +31,7 @@ export default {
   data() {
     return {
       walletAddress: '',
-      amount: '',
+      privateKey: '', // เพิ่ม privateKey ในข้อมูล
       navigationItems: [
         { icon: 'mdi-home', to: '/' },
         { icon: 'mdi-account', to: '/home' },
@@ -45,15 +41,34 @@ export default {
   methods: {
     async submitForm() {
       try {
-        const response = await axios.get('/create-wallet');
+        const response = await axios.get('http://localhost:3000/create-wallet');
         const data = response.data;
         if (data.message) {
           this.walletAddress = data.address; 
+          this.privateKey = data.privateKey; // เพิ่มบรรทัดนี้
           console.log('Wallet Address created:', this.walletAddress);
+
+          // เรียกใช้งาน API เพื่อดึงข้อมูลที่อยู่ในฐานข้อมูล
+          this.getWalletAddress();
         }
       } catch (error) {
         console.error('Error creating wallet:', error);
       }
+    },
+    async getWalletAddress() {
+      try {
+        const response = await axios.get('http://localhost:3000/get-account-address');
+        const data = response.data;
+        if (data.walletAddress) {
+          this.walletAddress = data.walletAddress;
+          console.log('Wallet Address from database:', this.walletAddress);
+        }
+      } catch (error) {
+        console.error('Error fetching wallet address from database:', error);
+      }
+    },
+    refreshPage() {
+      window.location.reload(); // รีเฟรชหน้า
     },
   },
 };
