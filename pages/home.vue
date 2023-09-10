@@ -33,9 +33,10 @@ export default {
       walletAddress: '',
       privateKey: '', // เพิ่ม privateKey ในข้อมูล
       navigationItems: [
-        { icon: 'mdi-home', to: '/' },
-        { icon: 'mdi-account', to: '/home' },
-      ],
+          { icon: 'mdi-home', to: '/' },
+          { icon: 'mdi-account', to: '/home' },
+          { icon: 'mdi-wallet', to: '/trx' },
+        ],
     };
   },
   methods: {

@@ -1,145 +1,198 @@
 <template>
-  <v-container>
-    <h1 class="text-center mb-4">Transfer Tokens</h1>
-    <v-row justify="center">
-      <v-col cols="12" sm="8" md="6" class="text-center">
-        <v-text-field
-          v-model="contractAddress"
-          label="Token Contract Address"
-          outlined
-          dense
-          color="primary"
-          placeholder="Enter token contract address"
-        ></v-text-field>
-      </v-col>
-    </v-row>
-    <v-row justify="center">
-      <v-col cols="12" sm="8" md="6" class="text-center">
-        <v-text-field
-          v-model="recipientAddress"
-          label="Recipient Address (ผู้รับ)"
-          outlined
-          dense
-          color="primary"
-          placeholder="Enter recipient address"
-        ></v-text-field>
-      </v-col>
-    </v-row>
-    <v-row justify="center">
-      <v-col cols="12" sm="8" md="6" class="text-center">
-        <v-text-field
-          v-model="amount"
-          label="Amount ( TRX )"
-          outlined
-          dense
-          color="primary"
-          placeholder="Enter amount"
-        ></v-text-field>
-      </v-col>
-    </v-row>
-    <v-row justify="center">
-      <v-col cols="12" sm="8" md="6" class="text-center">
-        <v-text-field
-          v-model="privateKey"
-          label="Private Key"
-          outlined
-          dense
-          color="primary"
-          placeholder="Enter private key"
-        ></v-text-field>
-      </v-col>
-    </v-row>
-    <v-row justify="center">
-      <v-col cols="12" class="text-center">
-        <v-btn color="primary" @click="sendTokens">Send tokens</v-btn>
-      </v-col>
-    </v-row>
+  <div class="container">
+    <h1 class="title mb-2">ส่งเหรียญ TRC20</h1>
+    <form @submit.prevent="sendTransaction" class="form">
+      <v-row justify="center">
+        <v-col cols="12" sm="8" md="6" class="text-center">
+          <v-text-field
+            v-model="fromAddress"
+            label="fromAddress"
+            outlined
+            dense
+            color="primary"
+            placeholder="Enter fromAddress"
+          ></v-text-field>
+        </v-col>
+      </v-row>
+      <br />
+      <v-row justify="center">
+        <v-col cols="12" sm="8" md="6" class="text-center">
+          <v-text-field
+            v-model="toAddress"
+            label="toAddress"
+            outlined
+            dense
+            color="primary"
+            placeholder="Enter toAddress"
+          ></v-text-field>
+        </v-col>
+      </v-row>
+      <br />
+      <v-row justify="center">
+        <v-col cols="12" sm="8" md="6" class="text-center">
+          <v-text-field
+            v-model="contractAddress"
+            label="contractAddress"
+            outlined
+            dense
+            color="primary"
+            placeholder="Enter contractAddress"
+          ></v-text-field>
+        </v-col>
+      </v-row>
+      <br />
+      <v-row justify="center">
+        <v-col cols="12" sm="8" md="6" class="text-center">
+          <v-text-field
+            v-model="amount"
+            label="amount"
+            outlined
+            dense
+            color="primary"
+            placeholder="Enter amount"
+          ></v-text-field>
+        </v-col>
+      </v-row>
+      <br />
+      <br />
+      <button type="submit" class="button">ส่ง</button>
+    </form>
+    <br />
+    <br />
+    <!-- Transaction result section -->
+    <div v-if="transactionResult !== null" class="result">
+      <h2 class="result-title">Transaction Result</h2>
+      <pre class="result-pre">{{ transactionResult }}</pre>
+    </div>
     <v-bottom-navigation color="primary" absolute app>
-      <v-btn
+      <router-link
         v-for="item in navigationItems"
         :key="item.icon"
         :to="item.to"
+        tag="button"
+        class="v-btn"
       >
         <v-icon>{{ item.icon }}</v-icon>
-      </v-btn>
+      </router-link>
     </v-bottom-navigation>
-    
-    <!-- เพิ่มส่วนที่แสดงผลการโอนเงินได้ตรงนี้ -->
-    <v-row justify="center" v-if="transactionResult">
-      <v-col cols="12" sm="8" md="6" class="text-center">
-        <h2>Transaction Result</h2>
-        <p>{{ transactionResult }}</p>
-      </v-col>
-    </v-row>
-  </v-container>
+  </div>
 </template>
 
 <script>
 export default {
   data() {
     return {
-      contractAddress: '', // ที่อยู่ของ smart contract ของเหรียญ TRC-20
-      recipientAddress: '',
-      contract: null,
-      amount: '',
-      privateKey: '', // เพิ่มช่องสำหรับใส่ Private Key
+      fromAddress: "",
+      toAddress: "",
+      amount: "",
+      contractAddress: "",
+      transactionResult: null,
       navigationItems: [
-        { icon: 'mdi-home', to: '/' },
-        { icon: 'mdi-account', to: '/home' },
-      ],
-      contractAbi: [ // ระบุ ABI ของสัญญา TRC-20 ของคุณ
-        {
-          constant: true,
-          inputs: [{ name: '_owner', type: 'address' }],
-          name: 'balanceOf',
-          outputs: [{ name: 'balance', type: 'uint256' }],
-          payable: false,
-          stateMutability: 'view',
-          type: 'function',
-        },
-        // เพิ่มเมธอดอื่น ๆ ของสัญญา TRC-20 ตรงนี้
-      ],
-      transactionResult: null, // ผลลัพธ์ของการโอนเงิน
+          { icon: 'mdi-home', to: '/' },
+          { icon: 'mdi-account', to: '/home' },
+          { icon: 'mdi-wallet', to: '/trx' },
+        ],
     };
   },
-
-
-
   methods: {
-    sendTokens() {
-      
-  // Check if the contract address is provided
-  if (!this.contractAddress) {
-    console.error('Contract address is required.');
-    return;
-  }
+    async sendTransaction() {
+      try {
+        // โค้ด TronWeb และการส่งข้อมูลไปยัง API จะเปลี่ยนไปตามความต้องการ
+        const response = await fetch(
+          "http://localhost:3000/send-trc20-transaction",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              fromAddress: this.fromAddress,
+              toAddress: this.toAddress,
+              contractAddress: this.contractAddress,
+              amount: parseFloat(this.amount),
+            }),
+          }
+        );
 
-  // Initialize the contract instance
-  this.contract = tronWeb.contract(this.contractAbi, this.contractAddress);
+        if (!response.ok) {
+          throw new Error("ไม่สามารถส่งเหรียญได้");
+        }
 
-  // Create the transaction object
-  const transactionObject = {
-    to: this.contractAddress,
-    value: 0,
-    data: this.contract.transfer(this.recipientAddress, this.amount).encodeABI(),
-  };
+        const data = await response.json();
 
-  // Sign and send the transaction
-  tronWeb.trx.sign(transactionObject, this.privateKey)
-    .then((signedTransaction) => {
-      return tronWeb.trx.sendRawTransaction(signedTransaction);
-    })
-    .then((result) => {
-      console.log('Transaction Result:', result);
-      this.transactionResult = 'Transaction Successful';
-    })
-    .catch((error) => {
-      console.error('Error sending tokens:', error);
-      this.transactionResult = 'Transaction Failed';
-    });
-},
+        this.transactionResult = "Transaction successful.\n" + JSON.stringify(data.transaction, null, 2);
+      } catch (error) {
+        console.error("เกิดข้อผิดพลาด:", error);
+        this.transactionResult = "Error: " + error.message;
+      }
+    },
   },
 };
-
-
 </script>
+
+<style scoped>
+.container {
+  text-align: center;
+  padding: 20px;
+}
+
+.title {
+  font-size: 200px;
+  color: #fff;
+}
+
+.form {
+  margin-top: 20px;
+}
+
+.label {
+  font-size: 18px;
+  color: #fff;
+}
+
+.input {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.button {
+  background-color: #007bff;
+  color: #fff;
+  font-size: 18px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: #0056b3;
+}
+
+.result {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #20b506;
+  border-radius: 5px;
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.result-title {
+  font-size: 20px;
+  color: #fff;
+  margin-top: 0;
+}
+
+.result-pre {
+  font-size: 16px;
+  white-space: pre-wrap;
+  color: #fff;
+}
+</style>

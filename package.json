@@ -24,6 +24,7 @@
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
     "@nuxtjs/vuetify": "^1.12.3",
-    "husky": "^8.0.1"
+    "husky": "^8.0.1",
+    "raw-loader": "^4.0.2"
   }
 }
